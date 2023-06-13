@@ -1,0 +1,7 @@
+obj/
+assets/
+external/
+vgcore.*
+towards
+imgui.ini
+compile_flags.txt
