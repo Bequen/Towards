@@ -1,6 +1,6 @@
 # Towards
 
-![What current render looks like](https://github.com/Bequen/towards/banner.png)
+![What current render looks like](banner.png)
 
 My bachelor project.
 
