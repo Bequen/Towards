@@ -25,6 +25,15 @@ SpaceShipCamera::SpaceShipCamera(vec3 position) {
 	glm_mat4_identity(rotation);
 }
 
+void SpaceShipCamera::enable() {
+	isEnabled = true;
+}
+
+
+void SpaceShipCamera::disable() {
+	isEnabled = false;
+}
+
 void SpaceShipCamera::on_tick() {
 	vec3 front = {rotation[0][2], rotation[1][2], rotation[2][2]};
 	glm_vec3_normalize(front);

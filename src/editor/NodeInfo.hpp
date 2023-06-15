@@ -5,6 +5,7 @@
 
 class NodeInfo : public EditorWindow {
 private:
+	void draw_transform_info();
 	void draw_mesh_info();
 
 public:

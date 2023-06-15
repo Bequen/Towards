@@ -5,6 +5,8 @@
 
 class SpaceShipCamera : public Camera {
 private:
+	bool isEnabled = false;
+
 	vec2 lastMousePosition;
 	
 	vec3 eye;
@@ -30,6 +32,9 @@ public:
 	SpaceShipCamera(vec3 position);
 
 	void on_tick() override;
+
+	void enable();
+	void disable();
 
 	void handle_event(SDL_Event *pEvent) override;
 

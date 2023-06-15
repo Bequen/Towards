@@ -11,7 +11,7 @@ EditorWindow(pEditor), pScene(pBuffer) {
 int SceneOutline::draw_node(SceneNode *pNode) {
 	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-	if(pNode == pSelected) {
+	if(pNode == pEditor->get_selected_node()) {
 		flags |= ImGuiTreeNodeFlags_Selected;
 	}
 
@@ -23,7 +23,6 @@ int SceneOutline::draw_node(SceneNode *pNode) {
 
 	if(ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
 		pEditor->select_node(pScene, pNode);
-		// pSelected = pNode;
 	}
 
 	if(pNode->numChildren > 0 && isOpen) {
@@ -40,6 +39,6 @@ int SceneOutline::draw_node(SceneNode *pNode) {
 
 void SceneOutline::draw() {
 	ImGui::Begin("Scene Outline");
-	draw_node(&pScene->pNodes[0]);
+	draw_node(pScene->graph()->node(0));
 	ImGui::End();
 }

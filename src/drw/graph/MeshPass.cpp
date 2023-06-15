@@ -25,22 +25,18 @@ void MeshPass::draw_scene(SceneBuffer *pScene) {
 	
 	pScene->use();
 
-	for(int i = 0; i < pScene->numNodes; i++) {
-		if(pScene->pNodes[i].meshIdx == -1)
-			continue;
+	for(int i = 0; i < pScene->pGraph->num_nodes(); i++) {
+		auto node = pScene->graph()->node(i);
+		if(node->mesh() != NULL) {
+			pipeline.push_mat4("model", node->transform()->mat);
 
-		pipeline.push_mat4("model", pScene->pTransforms[pScene->pNodes[i].transformIdx].mat);
-
-		Mesh *pMesh = &pScene->pMeshes[pScene->pNodes[i].meshIdx];
-		for(int p = 0; p < pMesh->numPrimitives; p++) {
-			glDrawElementsBaseVertex(GL_TRIANGLES, pScene->pPrimitives[pMesh->primitiveIdx + p].count, GL_UNSIGNED_SHORT, (void*)(pScene->pPrimitives[pMesh->primitiveIdx + p].offset * 2), pScene->pPrimitives[pMesh->primitiveIdx + p].baseVertex);
+			for(int p = 0; p < node->mesh()->numPrimitives; p++) {
+				glDrawElementsBaseVertex(GL_TRIANGLES, pScene->pPrimitives[node->mesh()->primitiveIdx + p].count, 
+										 GL_UNSIGNED_SHORT, (void*)(pScene->pPrimitives[node->mesh()->primitiveIdx + p].offset * 2),
+										 pScene->pPrimitives[node->mesh()->primitiveIdx + p].baseVertex);
+			}
 		}
 	}
-
-	/* auto meshes = pScene->get_meshes();
-	for(int i = 0; i < pScene->get_num_meshes(); i++) {
-		glDrawElements(GL_TRIANGLES, meshes[i].count, GL_UNSIGNED_SHORT, (void*)meshes[i].offset);
-	} */
 }
 
 void MeshPass::begin() {

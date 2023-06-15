@@ -23,10 +23,12 @@ SceneData::SceneData(unsigned long numNodes,
 	this->maxPrimitives = numPrimitives;
 	this->numPrimitives = 0;
 
-	pNodes = (SceneNode*)malloc(sizeof(SceneNode) * numNodes);
+	pGraph = new SceneGraph(numNodes);		
+
+	/* pNodes = (SceneNode*)malloc(sizeof(SceneNode) * numNodes);
 	pTransforms = (Transform*)malloc(sizeof(Transform) * numNodes);
 	this->maxNodes = this->maxTransforms = numNodes;
-	this->numNodes = this->numTransforms = 0;
+	this->numNodes = this->numTransforms = 0; */
 }
 
 Vertex* SceneData::suballoc_vertices(unsigned long count) {

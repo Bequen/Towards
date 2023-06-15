@@ -30,11 +30,7 @@ SceneBuffer::SceneBuffer(SceneData *pData) {
 	this->pPrimitives = pData->pPrimitives;
 	this->numPrimitives = pData->numPrimitives;
 
-	this->pTransforms = pData->pTransforms;
-	this->numTransforms = pData->numTransforms;
-
-	this->pNodes = pData->pNodes;
-	this->numNodes = pData->numNodes;
+	this->pGraph = pData->graph();
 }
 
 void SceneBuffer::use() {

@@ -16,8 +16,6 @@ void load_primitive(SceneData *pScene, cgltf_primitive *pPrimitive) {
 	Vertex *pVertices = pScene->suballoc_vertices(pPrimitive->attributes[0].data->count);
 	Index *pIndices = pScene->suballoc_indices(pPrimitive->indices->count);
 
-	printf("stride: %i %i\n", pPrimitive->indices->offset, pPrimitive->indices->count);
-
 	memcpy(pIndices, (char*)pPrimitive->indices->buffer_view->buffer->data + pPrimitive->indices->buffer_view->offset + pPrimitive->indices->offset, pPrimitive->indices->count * 2);
 
 	for(int a = 0; a < pPrimitive->attributes_count; a++) {
@@ -53,40 +51,46 @@ void load_primitive(SceneData *pScene, cgltf_primitive *pPrimitive) {
 }
 
 Transform make_node_transform(cgltf_node *pNode) {
-	mat4 mat;
+	Transform result = Transform();
 	if(pNode->has_matrix) {
-		memcpy(mat, pNode->matrix, sizeof(mat4));
+		memcpy(result.mat, pNode->matrix, sizeof(mat4));
 	} else {
-		glm_mat4_identity(mat);
 		if(pNode->has_translation) {
-			glm_translate(mat, (vec3){pNode->translation[0], pNode->translation[1], pNode->translation[2]});
+			vec3 translation = {
+				pNode->translation[0],
+				pNode->translation[1],
+				pNode->translation[2]
+			};
+			glm_translate(result.mat, translation);
 		} 
 
 		if(pNode->has_rotation) {
-			glm_quat_rotate(mat, (vec4){
-								pNode->rotation[0],
-								pNode->rotation[1],
-								pNode->rotation[2],
-								pNode->rotation[3]
-							}, mat);
+			vec4 rotation = {
+				pNode->rotation[0],
+				pNode->rotation[1],
+				pNode->rotation[2],
+				pNode->rotation[3],
+			};
+			glm_quat_rotate(result.mat, rotation, result.mat);
 		}
+
 		if(pNode->has_scale) {
-			glm_scale(mat, (vec3){pNode->scale[0], pNode->scale[1], pNode->scale[2]});
+			vec3 scale = {
+				pNode->scale[0],
+				pNode->scale[1],
+				pNode->scale[2]
+			};
+			glm_scale(result.mat, scale);
 		}
 	}
 
-	Transform result = Transform();
-	glm_mat4_copy(mat, result.mat);
+	glm_mat4_copy(result.mat, result.mat);
 	return result;
 }
 
 int load_mesh(SceneData *pScene, cgltf_mesh *pMesh) {
 	for(int p = 0; p < pMesh->primitives_count; p++) {
 		load_primitive(pScene, &pMesh->primitives[p]);
-
-		printf("pushing %i primitive: %i %i\n", pScene->numPrimitives,
-			   pScene->numIndices - pMesh->primitives[p].indices->count, 
-			   pMesh->primitives[p].indices->count);
 
 		pScene->push_primitive(pScene->numIndices - pMesh->primitives[p].indices->count,
 								pMesh->primitives[p].indices->count,
@@ -95,28 +99,21 @@ int load_mesh(SceneData *pScene, cgltf_mesh *pMesh) {
 	return pScene->push_mesh(pMesh->primitives_count);
 }
 
-int load_node(SceneData *pScene, cgltf_data *pData, Transform *pParent, cgltf_node *pNode) {
-	auto transform = make_node_transform(pNode);
-	transform.apply(pParent);
-	auto transformIdx = pScene->push_transform(transform);
-
-	/* get mesh index */
+int load_node(SceneData *pScene, cgltf_data *pData, cgltf_node *pNode) {
+	/* push new node to tree */
 	int meshIdx = pNode->mesh ? (int)(pNode->mesh - pData->meshes) : -1;
-	printf("Loading mesh %i\n", meshIdx);
+	int nodeIdx = pScene->graph()->push(SceneNode(pNode->name, pNode->children_count)
+											.set_mesh(meshIdx != -1 ? pScene->mesh(meshIdx) : NULL),
+										make_node_transform(pNode));
 
-	unsigned int nodeIdx = pScene->push_node({
-						.pName = pNode->name,
-						.meshIdx = meshIdx,	
-						.transformIdx = transformIdx,
-						.numChildren = (unsigned int)pNode->children_count
-					  });
-
+	/* load all the children */
 	int degree = 1;
 	for(int i = 0; i < pNode->children_count; i++) {
-		degree += load_node(pScene, pData, &pScene->pTransforms[transformIdx], pNode->children[i]);
+		degree += load_node(pScene, pData, pNode->children[i]);
 	}
 
-	pScene->pNodes[nodeIdx].degree = degree;
+	/* set the correct degree (number of nodes) */
+	pScene->graph()->node(nodeIdx)->set_degree(degree);
 
 	return degree;
 }
@@ -152,27 +149,24 @@ SceneData* io::gltf::load_scene(std::string path) {
 		}
 	}
 
-	SceneData *pResult = new SceneData(data->nodes_count + 1, data->meshes_count, numPrimitives, numVertices, numIndices);
+	SceneData *pResult = new SceneData(data->nodes_count + 1, data->meshes_count, 
+									   numPrimitives, numVertices, numIndices);
 
+	/* Loads meshes to be able to reference them */
 	for(int i = 0; i < data->meshes_count; i++) {
 		load_mesh(pResult, &data->meshes[i]);
 	}
 
-	printf("numPrimitives: %i\n", numPrimitives);
 	/* load nodes */
-	printf("Loading %i nodes\n", data->scene->nodes_count);
-	auto rootIdx = pResult->push_node({
-							.pName = "root",
-						   .meshIdx = -1,
-						   .transformIdx = pResult->push_transform(Transform()),
-						   .numChildren = (unsigned int)data->scene->nodes_count
-					   });
+	pResult->graph()->push(SceneNode("root", data->scene->nodes_count), Transform());
+
 	int degree = 1;
 	for(int i = 0; i < data->scene->nodes_count; i++) {
-		degree += load_node(pResult, data, &pResult->pTransforms[0], data->scene->nodes[i]);
+		degree += load_node(pResult, data, data->scene->nodes[i]);
 	}
 
-	pResult->pNodes[rootIdx].degree = degree;
+	pResult->graph()->node(0)->degree = degree;
+	pResult->graph()->apply_transform(pResult->graph()->node(0));
 
 	return pResult;
 }

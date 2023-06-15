@@ -21,7 +21,7 @@ INCLUDE=-I./internal/ \
 		-I./src/ \
 		-I./external/
 
-SUBDIRS=src/drw src/drw/graph \
+SUBDIRS=src/drw src/drw/graph src/drw/scene \
 		src/editor \
 		src/io/ \
 		src

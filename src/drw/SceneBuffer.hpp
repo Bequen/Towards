@@ -4,6 +4,8 @@
 #include "Pipeline.hpp"
 #include "SceneData.hpp"
 
+#include <assert.h>
+
 class SceneShader {
 public:
 	drw::Pipeline *pPipeline;
@@ -33,19 +35,22 @@ public:
 	Transform *pTransforms;
 	unsigned int numTransforms;
 
-	SceneNode *pNodes;
-	unsigned int numNodes;
+	SceneGraph *pGraph;
 
 public:
 	SceneBuffer(SceneData *pScene);
 
 	void use();
 
+	SceneGraph *graph() {
+		return pGraph;
+	}
+
 	/* returns the primitiveIdxth primitive of mesh at meshIdx  */
-	Primitive *mesh_primitive(unsigned int meshIdx, unsigned int primitiveIdx) {
-		if(pMeshes[meshIdx].numPrimitives > primitiveIdx)
-			return pPrimitives + (pMeshes[meshIdx].primitiveIdx + primitiveIdx);
-		return NULL;
+	Primitive *mesh_primitive(Mesh *pMesh, unsigned int primitiveIdx) {
+		assert(pMesh && primitiveIdx >= 0 && primitiveIdx < pMesh->numPrimitives);
+
+		return pPrimitives + (pMesh->primitiveIdx + primitiveIdx);
 	}
 
 	Mesh *mesh(unsigned int idx) {

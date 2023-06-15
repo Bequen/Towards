@@ -2,6 +2,7 @@
 
 #include "Vertex.hpp"
 #include "drw/scene/Transform.hpp"
+#include "drw/scene/SceneGraph.hpp"
 
 #include <cglm/mat4.h>
 #include <stdio.h>
@@ -15,16 +16,6 @@ struct Primitive {
 	unsigned int offset;
 	unsigned int count;
 	unsigned int baseVertex;
-};
-
-struct SceneNode {
-	char *pName;
-
-	int meshIdx;
-	unsigned int transformIdx;
-
-	unsigned int numChildren;
-	unsigned int degree; // number of nodes in subtree
 };
 
 /* Holds mesh data. There should not be any other structure holding actual data. They should all just be pointers. */
@@ -50,15 +41,13 @@ public:
 	unsigned int numPrimitives;
 
 	/* How and where draw these meshes */
-	SceneNode *pNodes;
-	unsigned long maxNodes;
-	unsigned long numNodes;
-
-	Transform *pTransforms;
-	unsigned long maxTransforms;
-	unsigned long numTransforms;
+	SceneGraph *pGraph;
 
 public:
+	SceneGraph *graph() { return pGraph; }
+
+	Mesh *mesh(unsigned int idx) { return &pMeshes[idx]; }
+
 	Vertex *get_vertices() {
 		return pVertices;
 	}
@@ -79,9 +68,6 @@ public:
 	unsigned long get_num_meshes() {
 		return numMeshes;
 	}
-
-	SceneNode *get_nodes() { return pNodes; }
-	unsigned long get_num_nodes() { return numNodes; }
 
 	/*
 	 * Allocates scene data with numVertices and numIndices.
@@ -113,17 +99,5 @@ public:
 			.count = indexCount,
 			.baseVertex = baseVertex
 		};
-	}
-
-	unsigned int push_node(SceneNode node) {
-		pNodes[numNodes++] = node;
-		return numNodes - 1;
-	}
-
-	unsigned int push_transform(Transform transform) {
-		printf("%i\n", numTransforms);
-		fflush(stdout);
-		pTransforms[numTransforms++] = transform;
-		return numTransforms - 1;
 	}
 };
