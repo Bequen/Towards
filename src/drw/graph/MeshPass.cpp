@@ -15,6 +15,7 @@ MeshPass MeshPass::from(MeshPassCreateInfo *pInfo) {
 		.fragmentShaderPath = io::path::shader("MeshPass.frag.glsl")
 	};
 	result.pipeline = drw::Pipeline::from(pipelineInfo);
+	result.pipeline.use();
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -22,8 +23,7 @@ MeshPass MeshPass::from(MeshPassCreateInfo *pInfo) {
 }
 
 void MeshPass::draw_scene(SceneBuffer *pScene) {
-	
-	pScene->use();
+	pScene->use(&pipeline);
 
 	for(int i = 0; i < pScene->pGraph->num_nodes(); i++) {
 		auto node = pScene->graph()->node(i);
@@ -31,6 +31,8 @@ void MeshPass::draw_scene(SceneBuffer *pScene) {
 			pipeline.push_mat4("model", node->transform()->mat);
 
 			for(int p = 0; p < node->mesh()->numPrimitives; p++) {
+				auto prim = pScene->pPrimitives[node->mesh()->primitiveIdx + p];
+				pipeline.push_i32("materialIdx", prim.materialIdx);
 				glDrawElementsBaseVertex(GL_TRIANGLES, pScene->pPrimitives[node->mesh()->primitiveIdx + p].count, 
 										 GL_UNSIGNED_SHORT, (void*)(pScene->pPrimitives[node->mesh()->primitiveIdx + p].offset * 2),
 										 pScene->pPrimitives[node->mesh()->primitiveIdx + p].baseVertex);

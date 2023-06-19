@@ -1,4 +1,7 @@
 EXECUTABLE=towards
+LIBRARY=libtowards.so
+
+AR=ar
 
 LIBS=`sdl2-config --cflags` \
 	 `sdl2-config --libs` \
@@ -42,6 +45,9 @@ info:
 
 ${EXECUTABLE}: ${OBJ}
 	${CXX} $^ -o $@ ${CFLAGS} -fuse-ld=mold ${LIBS}
+
+${LIBRARY}: $(filter-out obj/src/main.o,${OBJ})
+	${AR} -rcvs $@ $^
 
 obj/%.o:%.cpp
 	@mkdir -p $(dir $@)

@@ -59,8 +59,9 @@ int main(int argc, char** argv)
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window.get_window_handle(), window.get_context());
     ImGui_ImplOpenGL3_Init("#version 330");
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-	SpaceShipCamera camera = SpaceShipCamera((vec3){10.0f, 10.0f, 10.0f});
+	SpaceShipCamera camera = SpaceShipCamera((vec3){.0f, .0f, .0f});
 
 	bool done = false;
 	bool isEditorFocused = true;

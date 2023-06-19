@@ -32,7 +32,13 @@ void NodeInfo::draw_transform_info() {
 
 void NodeInfo::draw_mesh_info() {
 	ImGui::Text("Mesh Info");
-	static ImGuiTableFlags flags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+	static ImGuiTableFlags flags = 
+		ImGuiTableFlags_SizingFixedFit |
+		ImGuiTableFlags_RowBg | 
+		ImGuiTableFlags_Borders | 
+		ImGuiTableFlags_Resizable | 
+		ImGuiTableFlags_Reorderable |
+		ImGuiTableFlags_Hideable;
 
 	auto selected = pEditor->get_selected_node();
 	auto scene = pEditor->get_selected_scene();
@@ -67,7 +73,6 @@ void NodeInfo::draw_mesh_info() {
 			ImGui::Text("Base vertex");
 			ImGui::TableNextColumn();
 			ImGui::Text("%i", primitive->baseVertex);
-
 
 			ImGui::EndTable();
 		}

@@ -1,4 +1,6 @@
 #include "SceneBuffer.hpp"
+#include "drw/ArrayTextureStorage.hpp"
+#include "drw/Format.hpp"
 
 #include <glad.h>
 
@@ -6,7 +8,7 @@
 
 SceneBuffer::SceneBuffer(SceneData *pData) {
 	glGenVertexArrays(1, &vao);
-	use();
+	glBindVertexArray(vao);	
 
 	glGenBuffers(1, &vbo);
 	glGenBuffers(1, &ebo);
@@ -21,8 +23,13 @@ SceneBuffer::SceneBuffer(SceneData *pData) {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, norm)));
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, uv)));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, tangent)));
 	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, uv)));
+	glEnableVertexAttribArray(3);
+
+	m_pMaterialBuffer = new MaterialBuffer(64, pData->numMaterials);
+	m_pMaterialBuffer->push_materials(pData->numMaterials, pData->pMaterials);
 
 	this->pMeshes = pData->pMeshes;
 	this->numMeshes = pData->numMeshes;
@@ -33,6 +40,7 @@ SceneBuffer::SceneBuffer(SceneData *pData) {
 	this->pGraph = pData->graph();
 }
 
-void SceneBuffer::use() {
+void SceneBuffer::use(drw::Pipeline *pPipeline) {
 	glBindVertexArray(vao);
+	m_pMaterialBuffer->use(pPipeline);
 }

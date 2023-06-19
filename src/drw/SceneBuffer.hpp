@@ -3,6 +3,7 @@
 #include "Vertex.hpp"
 #include "Pipeline.hpp"
 #include "SceneData.hpp"
+#include "MaterialBuffer.hpp"
 
 #include <assert.h>
 
@@ -16,15 +17,12 @@ class SceneMaterial {
 	
 };
 
-class MaterialBuffer {
-public:
-
-};
-
 /* Holds multiple meshes in one buffer for optimization */
 class SceneBuffer {
 public:
 	unsigned int vbo, ebo, vao;
+
+	MaterialBuffer *m_pMaterialBuffer;
 
 	Mesh *pMeshes;
 	unsigned int numMeshes;
@@ -32,15 +30,12 @@ public:
 	Primitive *pPrimitives;
 	unsigned int numPrimitives;
 
-	Transform *pTransforms;
-	unsigned int numTransforms;
-
 	SceneGraph *pGraph;
 
 public:
 	SceneBuffer(SceneData *pScene);
 
-	void use();
+	void use(drw::Pipeline *pPipeline);
 
 	SceneGraph *graph() {
 		return pGraph;

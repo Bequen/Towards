@@ -35,7 +35,8 @@ public:
 	static Pipeline from(PipelineBuildInfo& info);
 
 	void use();
-	
+
+	unsigned int handle() { return program; };
 
 	/* push constants */
 	void push_mat4(std::string name, void *pData);

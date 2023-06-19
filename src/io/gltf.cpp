@@ -3,6 +3,7 @@
 #include "cglm/mat4.h"
 #include "drw/SceneBuffer.hpp"
 #include "drw/Vertex.hpp"
+#include <cstring>
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
@@ -15,8 +16,13 @@
 void load_primitive(SceneData *pScene, cgltf_primitive *pPrimitive) {
 	Vertex *pVertices = pScene->suballoc_vertices(pPrimitive->attributes[0].data->count);
 	Index *pIndices = pScene->suballoc_indices(pPrimitive->indices->count);
-
-	memcpy(pIndices, (char*)pPrimitive->indices->buffer_view->buffer->data + pPrimitive->indices->buffer_view->offset + pPrimitive->indices->offset, pPrimitive->indices->count * 2);
+	printf("Stride: %i\n", pPrimitive->indices->stride);
+	for(int i = 0; i < pPrimitive->indices->count; i++) {
+		pIndices[i] = *((Index*)((char*)pPrimitive->indices->buffer_view->buffer->data +
+										 pPrimitive->indices->buffer_view->offset +
+										 pPrimitive->indices->offset +
+										 i * pPrimitive->indices->stride));
+	}
 
 	for(int a = 0; a < pPrimitive->attributes_count; a++) {
 		auto attr = pPrimitive->attributes[a];
@@ -45,7 +51,25 @@ void load_primitive(SceneData *pScene, cgltf_primitive *pPrimitive) {
 				}
 				break;
 			case cgltf_attribute_type_texcoord:
+				for(int i = 0; i < attr.data->count; i++) {
+					float *pData = (float*)((char*)attr.data->buffer_view->buffer->data + 
+											attr.data->buffer_view->offset +
+											attr.data->offset +
+											i * attr.data->stride);
+					pVertices[i].uv[0] = pData[0];
+					pVertices[i].uv[1] = pData[1];
+				}
 				break;
+			case cgltf_attribute_type_tangent:
+				for(int i = 0; i < attr.data->count; i++) {
+					float *pData = (float*)((char*)attr.data->buffer_view->buffer->data + 
+											attr.data->buffer_view->offset +
+											attr.data->offset +
+											i * attr.data->stride);
+					pVertices[i].tangent[0] = pData[0];
+					pVertices[i].tangent[1] = pData[1];
+					pVertices[i].tangent[2] = pData[2];
+				}
 		}
 	}
 }
@@ -78,7 +102,7 @@ Transform make_node_transform(cgltf_node *pNode) {
 			vec3 scale = {
 				pNode->scale[0],
 				pNode->scale[1],
-				pNode->scale[2]
+				pNode->scale[2],
 			};
 			glm_scale(result.mat, scale);
 		}
@@ -88,13 +112,14 @@ Transform make_node_transform(cgltf_node *pNode) {
 	return result;
 }
 
-int load_mesh(SceneData *pScene, cgltf_mesh *pMesh) {
+int load_mesh(SceneData *pScene, cgltf_data *pData, cgltf_mesh *pMesh) {
 	for(int p = 0; p < pMesh->primitives_count; p++) {
 		load_primitive(pScene, &pMesh->primitives[p]);
 
 		pScene->push_primitive(pScene->numIndices - pMesh->primitives[p].indices->count,
 								pMesh->primitives[p].indices->count,
-								pScene->numVertices - pMesh->primitives[p].attributes[0].data->count);
+								pScene->numVertices - pMesh->primitives[p].attributes[0].data->count,
+								pMesh->primitives[p].material - pData->materials);
 	}
 	return pScene->push_mesh(pMesh->primitives_count);
 }
@@ -102,7 +127,10 @@ int load_mesh(SceneData *pScene, cgltf_mesh *pMesh) {
 int load_node(SceneData *pScene, cgltf_data *pData, cgltf_node *pNode) {
 	/* push new node to tree */
 	int meshIdx = pNode->mesh ? (int)(pNode->mesh - pData->meshes) : -1;
-	int nodeIdx = pScene->graph()->push(SceneNode(pNode->name, pNode->children_count)
+	char *pName = pNode->name;
+	if(!pName) pName = "node";
+
+	int nodeIdx = pScene->graph()->push(SceneNode(pName, pNode->children_count)
 											.set_mesh(meshIdx != -1 ? pScene->mesh(meshIdx) : NULL),
 										make_node_transform(pNode));
 
@@ -116,6 +144,47 @@ int load_node(SceneData *pScene, cgltf_data *pData, cgltf_node *pNode) {
 	pScene->graph()->node(nodeIdx)->set_degree(degree);
 
 	return degree;
+}
+
+void load_material(SceneData *pScene, cgltf_material *pMaterial) {
+	printf("Loading material %s\n", pMaterial->name);
+	MaterialData materialData = MaterialData();
+
+	if(pMaterial->has_pbr_metallic_roughness) {
+		auto pbr = pMaterial->pbr_metallic_roughness;
+
+		if(pbr.base_color_texture.texture != nullptr &&
+		   pbr.base_color_texture.texture->image != nullptr) {
+			ImageData *pBaseColor = new ImageData(strdup((char*)pScene->relative_path_of(pbr.base_color_texture.texture->image->uri).c_str()));
+			printf("Texture: %s\n", pBaseColor->pPath);
+			pBaseColor->load_file();
+			pBaseColor->parse();
+
+			materialData.pBaseColorImage = pBaseColor;
+		}
+
+		if(pbr.metallic_roughness_texture.texture &&
+		   pbr.metallic_roughness_texture.texture->image) {
+			ImageData *pMetallicRoughness = new ImageData(strdup((char*)pScene->relative_path_of(pbr.metallic_roughness_texture.texture->image->uri).c_str()));
+			printf("Texture: %s\n", pMetallicRoughness->pPath);
+			pMetallicRoughness->load_file();
+			pMetallicRoughness->parse();
+
+			materialData.pMetallicRoughnessImage = pMetallicRoughness;
+		}
+	}
+
+	if(pMaterial->normal_texture.texture &&
+	   pMaterial->normal_texture.texture->image) {
+		ImageData *pNormal = new ImageData(strdup((char*)pScene->relative_path_of(pMaterial->normal_texture.texture->image->uri).c_str()));
+		printf("Texture: %s\n", pNormal->pPath);
+		pNormal->load_file();
+		pNormal->parse();
+
+		materialData.pNormalImage = pNormal;
+	}
+
+	pScene->push_material(materialData);
 }
 
 /* loads mesh to specified memory
@@ -150,11 +219,18 @@ SceneData* io::gltf::load_scene(std::string path) {
 	}
 
 	SceneData *pResult = new SceneData(data->nodes_count + 1, data->meshes_count, 
-									   numPrimitives, numVertices, numIndices);
+									   numPrimitives, numVertices, numIndices,
+									   data->materials_count, data->textures_count);
+	pResult->set_path(path);
 
 	/* Loads meshes to be able to reference them */
 	for(int i = 0; i < data->meshes_count; i++) {
-		load_mesh(pResult, &data->meshes[i]);
+		load_mesh(pResult, data, &data->meshes[i]);
+	}
+
+	printf("loading %i materials\n", data->materials_count);
+	for(int i = 0; i < data->materials_count; i++) {
+		load_material(pResult, &data->materials[i]);
 	}
 
 	/* load nodes */

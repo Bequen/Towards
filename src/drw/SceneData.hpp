@@ -3,9 +3,16 @@
 #include "Vertex.hpp"
 #include "drw/scene/Transform.hpp"
 #include "drw/scene/SceneGraph.hpp"
+#include "drw/ImageData.hpp"
+#include "drw/MaterialData.hpp"
+
 
 #include <cglm/mat4.h>
 #include <stdio.h>
+#include <filesystem>
+#include <paths.h>
+#include <string.h>
+#include <string>
 
 struct Mesh {
 	unsigned int primitiveIdx;
@@ -16,12 +23,24 @@ struct Primitive {
 	unsigned int offset;
 	unsigned int count;
 	unsigned int baseVertex;
+	unsigned int materialIdx;
 };
 
 /* Holds mesh data. There should not be any other structure holding actual data. They should all just be pointers. */
 /* TODO: Turn pointers into LinearAllocators */
 class SceneData {
 public:
+	std::string m_dir;
+	std::string m_filename;
+
+	MaterialData *pMaterials;
+	unsigned long maxMaterials;
+	unsigned long numMaterials;
+
+	ImageData *pTextures;
+	unsigned long maxTextures;
+	unsigned long numTextures;
+
 	/* Information about meshes */
 	Vertex *pVertices;
 	unsigned long maxVertices;
@@ -44,6 +63,12 @@ public:
 	SceneGraph *pGraph;
 
 public:
+	void push_material(MaterialData data) {
+		pMaterials[numMaterials++] = data;
+	}
+	void set_path(std::string path);
+	std::string relative_path_of(std::string path);
+
 	SceneGraph *graph() { return pGraph; }
 
 	Mesh *mesh(unsigned int idx) { return &pMeshes[idx]; }
@@ -76,7 +101,9 @@ public:
 			  unsigned long numMeshes,
 			  unsigned long numPrimitives,
 			  unsigned long numVertices,
-			  unsigned long numIndices);
+			  unsigned long numIndices,
+			  unsigned long numMaterials, 
+			  unsigned long numTextures);
 
 	Vertex *suballoc_vertices(unsigned long count);
 
@@ -93,11 +120,12 @@ public:
 		return numMeshes - 1;
 	}
 
-	void push_primitive(unsigned int indexOffset, unsigned int indexCount, unsigned int baseVertex) {
+	void push_primitive(unsigned int indexOffset, unsigned int indexCount, unsigned int baseVertex, unsigned int materialIdx) {
 		pPrimitives[numPrimitives++] = {
 			.offset = indexOffset,
 			.count = indexCount,
-			.baseVertex = baseVertex
+			.baseVertex = baseVertex,
+			.materialIdx = materialIdx
 		};
 	}
 };

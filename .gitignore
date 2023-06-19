@@ -2,6 +2,9 @@ obj/
 assets/
 external/
 vgcore.*
+valgrind.log
+valgrind.log.core.*
 towards
 imgui.ini
 compile_flags.txt
+libtowards.so
